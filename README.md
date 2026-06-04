@@ -30,6 +30,7 @@ $env:DB_URL="jdbc:mysql://localhost:3306/quiz_portal"
 $env:DB_USERNAME="root"
 $env:DB_PASSWORD="your_mysql_password"
 $env:GEMINI_API_KEY="your_gemini_api_key"
+$env:DDL_AUTO="update"
 ```
 
 3. Run the app:
