@@ -1,0 +1,9 @@
+.git
+.idea
+target
+*.log
+*.err
+debug-request.txt
+dissertation_render
+Online_Quiz_Portal_Dissertation.docx
+Online_Quiz_Portal_Dissertation_Reference_Style.docx
