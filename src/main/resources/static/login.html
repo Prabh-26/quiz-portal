@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz Portal Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main class="auth-page">
+    <section class="auth-hero">
+        <p class="eyebrow">Online Quiz Portal</p>
+        <h1>Assessments that feel organized from the first click.</h1>
+        <p>Students can jump into assigned tests, track scores, and keep their progress in view while admins manage the learning flow.</p>
+    </section>
+
+    <section class="auth-card">
+        <h2>Welcome Back</h2>
+        <p>Sign in to continue to your dashboard.</p>
+
+        <div class="form-stack">
+            <input type="text" id="username" placeholder="Username">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="login()">Login</button>
+        </div>
+
+        <p id="message"></p>
+        <p>New student? <a href="register.html">Register here</a></p>
+    </section>
+</main>
+
+<script>
+    function login() {
+        let username = document.getElementById("username").value;
+        let password = document.getElementById("password").value;
+        if (username === "" || password === "") {
+            document.getElementById("message").innerText = "Please enter username and password.";
+            return;
+        }
+
+        fetch("/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: "username=" + username + "&password=" + password
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "admin") {
+                    localStorage.setItem("username", username);
+                    localStorage.setItem("password", password);
+                    localStorage.setItem("role", "admin");
+                    window.location.href = "admin.html";
+                } else if (data === "student") {
+                    localStorage.setItem("username", username);
+                    localStorage.setItem("password", password);
+                    localStorage.setItem("role", "student");
+                    window.location.href = "dashboard.html";
+                } else {
+                    document.getElementById("message").innerText = "Invalid username or password";
+                }
+            });
+    }
+</script>
+
+</body>
+</html>

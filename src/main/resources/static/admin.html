@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main class="page">
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark">Q</span>
+            <span>Quiz Portal</span>
+        </div>
+        <nav class="nav-links">
+            <a href="login.html">Logout</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <p class="eyebrow">Admin Panel</p>
+        <h2>Manage courses, tests, students, and questions.</h2>
+        <p class="page-subtitle">Create the building blocks of the quiz portal and keep generated questions easy to review before saving.</p>
+    </section>
+
+    <section class="admin-grid">
+        <article class="panel">
+            <h3>Create New Subject</h3>
+            <div class="form-stack">
+                <input type="text" id="subjectName" placeholder="Subject name">
+                <input type="number" id="subjectCourseId" placeholder="Course ID">
+            </div>
+            <div class="form-actions">
+                <button onclick="addSubject()">Add Subject</button>
+            </div>
+            <p id="subjectMessage"></p>
+        </article>
+
+        <article class="panel">
+            <h3>Approve New Student</h3>
+            <div class="form-stack">
+                <input type="text" id="approvedRollNumber" placeholder="Roll number">
+                <input type="text" id="approvedStudentName" placeholder="Student name">
+                <input type="number" id="approvedStudentCourseId" placeholder="Course ID">
+            </div>
+            <div class="form-actions">
+                <button onclick="addApprovedStudent()">Approve Student</button>
+            </div>
+            <p id="approvedStudentMessage"></p>
+        </article>
+
+        <article class="panel">
+            <h3>Create New Test</h3>
+            <div class="form-stack">
+                <input type="text" id="testTitle" placeholder="Test title">
+                <input type="number" id="subjectId" placeholder="Subject ID">
+                <input type="number" id="courseId" placeholder="Course ID">
+            </div>
+            <div class="form-actions">
+                <button onclick="addTest()">Add Test</button>
+            </div>
+            <p id="testMessage"></p>
+        </article>
+
+        <article class="panel">
+            <h3>Generate Questions With Gemini</h3>
+            <div class="form-stack">
+                <input type="text" id="aiTopic" placeholder="Topic">
+                <input type="number" id="aiQuestionCount" placeholder="Number of questions">
+                <input type="number" id="aiTestId" placeholder="Test ID">
+            </div>
+            <div class="form-actions">
+                <button onclick="generateQuestions()">Generate Questions</button>
+                <button class="secondary" onclick="saveGeneratedQuestions()">Save Generated Questions</button>
+            </div>
+            <p id="aiMessage"></p>
+        </article>
+
+        <article class="panel wide">
+            <h3>Add New Question</h3>
+            <div class="form-grid">
+                <input type="text" id="questionText" placeholder="Question">
+                <input type="text" id="optionA" placeholder="Option A">
+                <input type="text" id="optionB" placeholder="Option B">
+                <input type="text" id="optionC" placeholder="Option C">
+                <input type="text" id="optionD" placeholder="Option D">
+                <select id="correctOption">
+                    <option value="A">Correct: A</option>
+                    <option value="B">Correct: B</option>
+                    <option value="C">Correct: C</option>
+                    <option value="D">Correct: D</option>
+                </select>
+                <input type="number" id="testId" placeholder="Test ID">
+            </div>
+            <div class="form-actions">
+                <button onclick="addQuestion()">Add Question</button>
+            </div>
+            <p id="message"></p>
+        </article>
+
+        <article class="panel wide">
+            <div class="section-header">
+                <h3>Generated Questions</h3>
+            </div>
+            <div id="generatedQuestionList"></div>
+        </article>
+
+        <article class="panel">
+            <div class="section-header">
+                <h3>All Subjects</h3>
+                <p id="subjectCount"></p>
+            </div>
+            <div id="subjectList"></div>
+        </article>
+
+        <article class="panel">
+            <div class="section-header">
+                <h3>Approved Students</h3>
+                <p id="approvedStudentCount"></p>
+            </div>
+            <div id="approvedStudentList"></div>
+        </article>
+
+        <article class="panel">
+            <div class="section-header">
+                <h3>All Tests</h3>
+                <p id="testCount"></p>
+            </div>
+            <div id="testList"></div>
+        </article>
+
+        <article class="panel wide">
+            <div class="section-header">
+                <h3>All Questions</h3>
+                <p id="questionCount"></p>
+            </div>
+            <div id="questionList"></div>
+        </article>
+    </section>
+</main>
+
+<script>
+    if (localStorage.getItem("role") !== "admin") {
+        window.location.href = "login.html";
+    }
+
+    let generatedQuestions = [];
+
+    function addSubject() {
+        let subject = {
+            subjectName: document.getElementById("subjectName").value,
+            courseId: document.getElementById("subjectCourseId").value
+        };
+
+        if (subject.subjectName === "" ||
+            subject.courseId === "") {
+            document.getElementById("subjectMessage").innerText =
+                "Please fill all subject fields.";
+            return;
+        }
+
+        fetch("/subjects/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(subject)
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("subjectMessage").innerText =
+                        "Subject added successfully.";
+                    loadSubjects();
+                } else {
+                    document.getElementById("subjectMessage").innerText =
+                        "Subject not added. Check course ID.";
+                }
+            });
+    }
+
+    function loadSubjects() {
+        fetch("/subjects")
+            .then(response => response.json())
+            .then(data => {
+                let subjectList = document.getElementById("subjectList");
+                subjectList.innerHTML = "";
+
+                if (!Array.isArray(data)) {
+                    document.getElementById("subjectCount").innerText =
+                        "Total Subjects: 0";
+                    subjectList.innerHTML =
+                        "<p>Could not load subjects. Please restart the Spring Boot app.</p>";
+                    return;
+                }
+
+                document.getElementById("subjectCount").innerText =
+                    "Total Subjects: " + data.length;
+
+                if (data.length === 0) {
+                    subjectList.innerHTML = "<p>No subjects added yet.</p>";
+                    return;
+                }
+
+                data.forEach(subject => {
+                    subjectList.innerHTML += `
+                        <div>
+                            <p><b>ID: ${subject.id}</b></p>
+                            <p>Name: ${subject.subjectName}</p>
+                            <p>Course ID: ${subject.courseId}</p>
+                        </div>
+                    `;
+                });
+            });
+    }
+
+    function addApprovedStudent() {
+        let approvedStudent = {
+            rollNumber: document.getElementById("approvedRollNumber").value,
+            studentName: document.getElementById("approvedStudentName").value,
+            courseId: document.getElementById("approvedStudentCourseId").value
+        };
+
+        if (approvedStudent.rollNumber === "" ||
+            approvedStudent.studentName === "" ||
+            approvedStudent.courseId === "") {
+            document.getElementById("approvedStudentMessage").innerText =
+                "Please fill all approved student fields.";
+            return;
+        }
+
+        fetch("/approved-students/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(approvedStudent)
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("approvedStudentMessage").innerText =
+                        "Student approved successfully.";
+                    loadApprovedStudents();
+                } else if (data === "duplicate") {
+                    document.getElementById("approvedStudentMessage").innerText =
+                        "This roll number is already approved.";
+                } else {
+                    document.getElementById("approvedStudentMessage").innerText =
+                        "Student not approved. Check course ID.";
+                }
+            });
+    }
+
+    function loadApprovedStudents() {
+        fetch("/approved-students")
+            .then(response => response.json())
+            .then(data => {
+                let approvedStudentList = document.getElementById("approvedStudentList");
+                approvedStudentList.innerHTML = "";
+
+                if (!Array.isArray(data)) {
+                    document.getElementById("approvedStudentCount").innerText =
+                        "Total Approved Students: 0";
+                    approvedStudentList.innerHTML =
+                        "<p>Could not load approved students. Please restart the Spring Boot app.</p>";
+                    return;
+                }
+
+                document.getElementById("approvedStudentCount").innerText =
+                    "Total Approved Students: " + data.length;
+
+                if (data.length === 0) {
+                    approvedStudentList.innerHTML = "<p>No approved students added yet.</p>";
+                    return;
+                }
+
+                data.forEach(student => {
+                    approvedStudentList.innerHTML += `
+                        <div>
+                            <p><b>ID: ${student.id}</b></p>
+                            <p>Roll Number: ${student.rollNumber}</p>
+                            <p>Name: ${student.studentName}</p>
+                            <p>Course ID: ${student.courseId}</p>
+                            <button onclick="deleteApprovedStudent(${student.id})">Delete</button>
+                        </div>
+                    `;
+                });
+            });
+    }
+
+    function addTest() {
+        let test = {
+            testTitle: document.getElementById("testTitle").value,
+            subjectId: document.getElementById("subjectId").value,
+            courseId: document.getElementById("courseId").value
+        };
+
+        if (test.testTitle === "" ||
+            test.subjectId === "" ||
+            test.courseId === "") {
+            document.getElementById("testMessage").innerText =
+                "Please fill all test fields.";
+            return;
+        }
+
+        fetch("/tests/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(test)
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("testMessage").innerText =
+                        "Test added successfully.";
+                    loadTests();
+                } else {
+                    document.getElementById("testMessage").innerText =
+                        "Test not added. Check subject ID and course ID.";
+                }
+            });
+    }
+
+    function loadTests() {
+        fetch("/tests")
+            .then(response => response.json())
+            .then(data => {
+                let testList = document.getElementById("testList");
+                testList.innerHTML = "";
+                document.getElementById("testCount").innerText =
+                    "Total Tests: " + data.length;
+
+                if (data.length === 0) {
+                    testList.innerHTML = "<p>No tests added yet.</p>";
+                    return;
+                }
+
+                data.forEach(test => {
+                    testList.innerHTML += `
+                        <div>
+                            <p><b>ID: ${test.id}</b></p>
+                            <p>Title: ${test.testTitle}</p>
+                            <p>Subject ID: ${test.subjectId}</p>
+                            <p>Course ID: ${test.courseId}</p>
+                            <button onclick="deleteTest(${test.id})">Delete</button>
+                        </div>
+                    `;
+                });
+            });
+    }
+
+    function deleteApprovedStudent(id) {
+        if (!confirm("Delete this approved student?")) {
+            return;
+        }
+
+        fetch("/approved-students/delete/" + id, {
+            method: "DELETE"
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("approvedStudentMessage").innerText =
+                        "Approved student deleted successfully.";
+                    loadApprovedStudents();
+                } else {
+                    document.getElementById("approvedStudentMessage").innerText =
+                        "Approved student was not found.";
+                }
+            });
+    }
+
+    function deleteTest(id) {
+        if (!confirm("Delete this test and its questions/results?")) {
+            return;
+        }
+
+        fetch("/tests/delete/" + id, {
+            method: "DELETE"
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("testMessage").innerText =
+                        "Test deleted successfully.";
+                    loadTests();
+                    loadQuestions();
+                } else {
+                    document.getElementById("testMessage").innerText =
+                        "Test was not found.";
+                }
+            });
+    }
+
+    function generateQuestions() {
+        let generationRequest = {
+            topic: document.getElementById("aiTopic").value,
+            questionCount: document.getElementById("aiQuestionCount").value,
+            testId: document.getElementById("aiTestId").value
+        };
+
+        if (generationRequest.topic === "" ||
+            generationRequest.questionCount === "" ||
+            generationRequest.testId === "") {
+            document.getElementById("aiMessage").innerText =
+                "Please fill topic, question count, and test ID.";
+            return;
+        }
+
+        document.getElementById("aiMessage").innerText =
+            "Generating questions...";
+        document.getElementById("generatedQuestionList").innerHTML = "";
+
+        fetch("/questions/generate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(generationRequest)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(error => {
+                        throw new Error(error);
+                    });
+                }
+
+                return response.json();
+            })
+            .then(data => {
+                generatedQuestions = data;
+                document.getElementById("aiMessage").innerText =
+                    "Questions generated. Review them before saving.";
+                showGeneratedQuestions();
+            })
+            .catch(error => {
+                if (error.message === "missing api key") {
+                    document.getElementById("aiMessage").innerText =
+                        "Gemini API key is missing. Add GEMINI_API_KEY and restart Spring Boot.";
+                } else {
+                    document.getElementById("aiMessage").innerText =
+                        "Could not generate questions. Please try again.";
+                }
+            });
+    }
+
+    function showGeneratedQuestions() {
+        let generatedQuestionList =
+            document.getElementById("generatedQuestionList");
+        generatedQuestionList.innerHTML = "";
+
+        generatedQuestions.forEach(question => {
+            generatedQuestionList.innerHTML += `
+                <div>
+                    <p><b>${question.questionText}</b></p>
+                    <p>A. ${question.optionA}</p>
+                    <p>B. ${question.optionB}</p>
+                    <p>C. ${question.optionC}</p>
+                    <p>D. ${question.optionD}</p>
+                    <p>Correct Answer: ${question.correctOption}</p>
+                    <p>Test ID: ${question.testId}</p>
+                </div>
+            `;
+        });
+    }
+
+    function saveGeneratedQuestions() {
+        if (generatedQuestions.length === 0) {
+            document.getElementById("aiMessage").innerText =
+                "Generate questions before saving.";
+            return;
+        }
+
+        fetch("/questions/add-all", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(generatedQuestions)
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("aiMessage").innerText =
+                        "Generated questions saved successfully.";
+                    generatedQuestions = [];
+                    document.getElementById("generatedQuestionList").innerHTML = "";
+                    loadQuestions();
+                } else {
+                    document.getElementById("aiMessage").innerText =
+                        "Generated questions were not saved.";
+                }
+            });
+    }
+
+    function loadQuestions() {
+        fetch("/questions")
+            .then(response => response.json())
+            .then(data => {
+                let questionList = document.getElementById("questionList");
+                questionList.innerHTML = "";
+                document.getElementById("questionCount").innerText =
+                    "Total Questions: " + data.length;
+
+                data.forEach(q => {
+                    questionList.innerHTML += `
+                        <div>
+                            <p><b>${q.questionText}</b></p>
+                            <p>A. ${q.optionA}</p>
+                            <p>B. ${q.optionB}</p>
+                            <p>C. ${q.optionC}</p>
+                            <p>D. ${q.optionD}</p>
+                            <p>Correct Answer: ${q.correctOption}</p>
+                            <button onclick="deleteQuestion(${q.id})">Delete</button>
+                        </div>
+                        <hr>
+                    `;
+                });
+            });
+    }
+
+    function addQuestion() {
+        let question = {
+            questionText: document.getElementById("questionText").value,
+            optionA: document.getElementById("optionA").value,
+            optionB: document.getElementById("optionB").value,
+            optionC: document.getElementById("optionC").value,
+            optionD: document.getElementById("optionD").value,
+            correctOption: document.getElementById("correctOption").value,
+            testId: document.getElementById("testId").value
+        };
+
+        if (question.questionText === "" ||
+            question.optionA === "" ||
+            question.optionB === "" ||
+            question.optionC === "" ||
+            question.optionD === "" ||
+            question.testId === "") {
+            document.getElementById("message").innerText =
+                "Please fill all question fields.";
+            return;
+        }
+
+        fetch("/questions/add", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(question)
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("message").innerText = "Question added successfully.";
+                    loadQuestions();
+                } else {
+                    document.getElementById("message").innerText = "Something went wrong.";
+                }
+            });
+    }
+
+    function deleteQuestion(id) {
+        fetch("/questions/delete/" + id, {
+            method: "DELETE"
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("message").innerText = "Question deleted successfully.";
+                    loadQuestions();
+                } else if (data === "invalid test") {
+                    document.getElementById("message").innerText = "Please enter a valid test ID.";
+                } else {
+                    document.getElementById("message").innerText = "Something went wrong.";
+                }
+            });
+    }
+
+    loadSubjects();
+    loadApprovedStudents();
+    loadTests();
+    loadQuestions();
+</script>
+
+</body>
+</html>

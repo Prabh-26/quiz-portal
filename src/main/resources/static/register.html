@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Register</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main class="auth-page">
+    <section class="auth-hero">
+        <p class="eyebrow">Student Access</p>
+        <h1>Create your account and start taking approved tests.</h1>
+        <p>Use the roll number approved by your admin so your account connects to the right course and test list.</p>
+    </section>
+
+    <section class="auth-card">
+        <h2>Student Register</h2>
+        <p>Enter your details to request portal access.</p>
+
+        <div class="form-stack">
+            <input type="text" id="username" placeholder="Choose username">
+            <input type="password" id="password" placeholder="Choose password">
+            <input type="text" id="rollNumber" placeholder="Roll number">
+            <button onclick="register()">Register</button>
+        </div>
+
+        <p id="message"></p>
+        <p>Already have an account? <a href="login.html">Login here</a></p>
+    </section>
+</main>
+
+<script>
+    function register() {
+        let username = document.getElementById("username").value;
+        let password = document.getElementById("password").value;
+        let rollNumber = document.getElementById("rollNumber").value;
+        if (username === "" || password === "" || rollNumber === "") {
+            document.getElementById("message").innerText =
+                "Please fill all fields.";
+            return;
+        }
+
+        fetch("/register", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: "username=" + username +
+                "&password=" + password +
+                "&rollNumber=" + rollNumber
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("message").innerText =
+                        "Registration successful. You can login now.";
+                } else {
+                    document.getElementById("message").innerText =
+                        "Registration failed. Invalid roll number or username already exists.";
+                }
+            });
+    }
+</script>
+
+</body>
+</html>

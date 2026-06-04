@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Result History</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main class="page">
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark">Q</span>
+            <span>Quiz Portal</span>
+        </div>
+        <nav class="nav-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="login.html">Logout</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <p class="eyebrow">Result History</p>
+        <h2>Your past attempts</h2>
+        <p class="page-subtitle">Track previous scores and review when each test was completed.</p>
+    </section>
+
+    <div id="resultList"></div>
+</main>
+
+<script>
+    if (localStorage.getItem("role") !== "student") {
+        window.location.href = "login.html";
+    }
+
+    let username = localStorage.getItem("username");
+    let password = localStorage.getItem("password");
+
+    fetch("/result/history?username=" + username + "&password=" + password)
+        .then(response => response.json())
+        .then(data => {
+            let resultList = document.getElementById("resultList");
+
+            if (data.length === 0) {
+                resultList.innerHTML = "<p>No results found.</p>";
+                return;
+            }
+
+            data.forEach(r => {
+                resultList.innerHTML += `
+                    <div>
+                        <p><b>${r.testTitle}</b></p>
+                        <p>Test ID: ${r.testId}</p>
+                        <p>Score: ${r.score} out of ${r.total}</p>
+                        <p>Date: ${new Date(r.takenAt).toLocaleString()}</p>
+                    </div>
+                `;
+            });
+        });
+</script>
+
+</body>
+</html>

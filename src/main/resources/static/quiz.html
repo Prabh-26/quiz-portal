@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quiz</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main class="page">
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark">Q</span>
+            <span>Quiz Portal</span>
+        </div>
+        <nav class="nav-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="result.html">Result History</a>
+            <a href="login.html">Logout</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <p class="eyebrow">Quiz</p>
+        <h2>Answer every question before submitting.</h2>
+        <p class="page-subtitle">Choose one option per question. Your score is saved after a successful submission.</p>
+    </section>
+
+    <div id="quizBox"></div>
+
+    <div class="quiz-actions">
+        <button onclick="submitQuiz()">Submit Quiz</button>
+        <a class="button secondary" href="result.html">View Result History</a>
+    </div>
+
+    <h3 id="result"></h3>
+</main>
+
+<script>
+    if (localStorage.getItem("role") !== "student") {
+        window.location.href = "login.html";
+    }
+
+    let questions = [];
+
+    let urlParams = new URLSearchParams(window.location.search);
+    let testId = urlParams.get("testId");
+
+    fetch("/questions?testId=" + testId)
+        .then(response => response.json())
+        .then(data => {
+            questions = data;
+            showQuestions();
+        });
+
+    function showQuestions() {
+        let quizBox = document.getElementById("quizBox");
+
+        questions.forEach((q, index) => {
+            quizBox.innerHTML += `
+                    <div>
+                        <h3>${index + 1}. ${q.questionText}</h3>
+
+                        <label><input type="radio" name="question${q.id}" value="A"> ${q.optionA}</label><br>
+                        <label><input type="radio" name="question${q.id}" value="B"> ${q.optionB}</label><br>
+                        <label><input type="radio" name="question${q.id}" value="C"> ${q.optionC}</label><br>
+                        <label><input type="radio" name="question${q.id}" value="D"> ${q.optionD}</label><br>
+                    </div>
+                `;
+        });
+    }
+
+    function submitQuiz() {
+        let score = 0;
+        let answeredCount = 0;
+
+        questions.forEach(q => {
+            let selected = document.querySelector(`input[name="question${q.id}"]:checked`);
+
+            if (selected) {
+                answeredCount++;
+            }
+
+            if (selected && selected.value === q.correctOption) {
+                score++;
+            }
+        });
+
+        if (answeredCount < questions.length) {
+            document.getElementById("result").innerText =
+                "Please answer all questions before submitting.";
+            return;
+        }
+
+        document.getElementById("result").innerText =
+            "Your score is " + score + " out of " + questions.length;
+
+        let username = localStorage.getItem("username");
+        let password = localStorage.getItem("password");
+
+        fetch("/result/save", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: "username=" + username +
+                "&password=" + password +
+                "&score=" + score +
+                "&total=" + questions.length +
+                "&testId=" + testId
+        })
+            .then(response => response.text())
+            .then(data => {
+                if (data === "success") {
+                    document.getElementById("result").innerText += " | Result saved.";
+                } else {
+                    document.getElementById("result").innerText += " | Result not saved: " + data;
+                }
+            });
+    }
+</script>
+
+</body>
+</html>

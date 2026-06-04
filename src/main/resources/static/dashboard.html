@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<main class="page">
+    <header class="topbar">
+        <div class="brand">
+            <span class="brand-mark">Q</span>
+            <span>Quiz Portal</span>
+        </div>
+        <nav class="nav-links">
+            <a href="result.html">Result History</a>
+            <a href="login.html">Logout</a>
+        </nav>
+    </header>
+
+    <section class="hero">
+        <p class="eyebrow">Student Dashboard</p>
+        <h2>Your quiz workspace</h2>
+        <p class="page-subtitle">Review performance, scan recent scores, and start tests assigned to your course.</p>
+    </section>
+
+    <section class="section">
+        <div class="section-header">
+            <h3>Performance Summary</h3>
+        </div>
+        <div id="performanceBox"></div>
+    </section>
+
+    <section class="section">
+        <div class="section-header">
+            <h3>Recent Scores</h3>
+        </div>
+        <div id="recentScoreList"></div>
+    </section>
+
+    <section class="section">
+        <div class="section-header">
+            <h3>Available Tests</h3>
+        </div>
+        <div id="testList"></div>
+    </section>
+</main>
+
+<script>
+    if (localStorage.getItem("role") !== "student") {
+        window.location.href = "login.html";
+    }
+
+    let username = localStorage.getItem("username");
+    let password = localStorage.getItem("password");
+
+    let subjects = [];
+
+    function loadPerformance() {
+        fetch("/result/history?username=" + username + "&password=" + password)
+            .then(response => response.json())
+            .then(data => {
+                let performanceBox = document.getElementById("performanceBox");
+                let recentScoreList = document.getElementById("recentScoreList");
+                performanceBox.innerHTML = "";
+                recentScoreList.innerHTML = "";
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    performanceBox.innerHTML = `
+                        <div>
+                            <p>Total Attempts: 0</p>
+                            <p>Average Performance: No attempts yet</p>
+                            <p>Best Score: No attempts yet</p>
+                        </div>
+                    `;
+                    recentScoreList.innerHTML = "<p>No recent scores found.</p>";
+                    return;
+                }
+
+                let totalScore = 0;
+                let totalQuestions = 0;
+                let bestPercentage = 0;
+
+                data.forEach(result => {
+                    totalScore += result.score;
+                    totalQuestions += result.total;
+
+                    let percentage = result.total > 0
+                        ? Math.round((result.score / result.total) * 100)
+                        : 0;
+
+                    if (percentage > bestPercentage) {
+                        bestPercentage = percentage;
+                    }
+                });
+
+                let averagePercentage = totalQuestions > 0
+                    ? Math.round((totalScore / totalQuestions) * 100)
+                    : 0;
+
+                performanceBox.innerHTML = `
+                    <div>
+                        <p>Total Attempts: ${data.length}</p>
+                        <p>Average Performance: ${averagePercentage}%</p>
+                        <p>Best Score: ${bestPercentage}%</p>
+                    </div>
+                `;
+
+                data.sort((a, b) => new Date(b.takenAt) - new Date(a.takenAt));
+                data.slice(0, 3).forEach(result => {
+                    let percentage = result.total > 0
+                        ? Math.round((result.score / result.total) * 100)
+                        : 0;
+
+                    recentScoreList.innerHTML += `
+                        <div>
+                            <p><b>${result.testTitle}</b></p>
+                            <p>Score: ${result.score} out of ${result.total} (${percentage}%)</p>
+                            <p>Date: ${new Date(result.takenAt).toLocaleString()}</p>
+                        </div>
+                    `;
+                });
+            });
+    }
+
+    fetch("/subjects/my?username=" + username + "&password=" + password)
+        .then(response => response.json())
+        .then(subjectData => {
+            subjects = subjectData;
+            return fetch("/tests/my?username=" + username + "&password=" + password);
+        })
+        .then(response => response.json())
+        .then(testData => {
+            let testList = document.getElementById("testList");
+            testList.innerHTML = "";
+
+            if (testData.length === 0) {
+                testList.innerHTML = "<p>No tests available for your course.</p>";
+                return;
+            }
+
+            testData.forEach(test => {
+                let subject = subjects.find(s => s.id === test.subjectId);
+                let subjectName = subject ? subject.subjectName : "Unknown Subject";
+
+                testList.innerHTML += `
+                    <div>
+                        <h3>${test.testTitle}</h3>
+                        <p>Subject: ${subjectName}</p>
+                        <a class="button" href="quiz.html?testId=${test.id}">Start Test</a>
+                    </div>
+                `;
+            });
+        });
+
+    loadPerformance();
+</script>
+
+</body>
+</html>
